@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv_ml/
+venv_backend/
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# IDE (e.g., VS Code)
+.vscode/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Large Files
+data/
+ml/*.h5
+ml/*.pt
+ml/*.pb
