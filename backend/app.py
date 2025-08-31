@@ -7,13 +7,11 @@ import numpy as np
 import json
 from PIL import Image
 
-# Import recommendation logic from the ml folder
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ml')))
+# Import recommendation logic from the same folder
 from recommendations import get_recommendations
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for frontend communication
+CORS(app)  # Enable CORS for frontend communication
 
 # Define paths to your ML model and class names JSON
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'ml', 'crop_disease_model_best_weights.h5')
@@ -64,17 +62,17 @@ def predict():
     try:
         # Read the image file directly from the stream
         img = Image.open(file.stream).convert('RGB')
-        img = img.resize((224, 224)) # Resize to model's expected input shape
+        img = img.resize((224, 224))  # Resize to model's expected input shape
 
         # Convert image to a numpy array and normalize
         img_array = image.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0) # Add batch dimension (1, 224, 224, 3)
-        img_array /= 255.0 # Normalize pixel values to [0, 1]
+        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension (1, 224, 224, 3)
+        img_array /= 255.0  # Normalize pixel values to [0, 1]
 
         # Make prediction
         predictions = model.predict(img_array)
-        predicted_class_idx = np.argmax(predictions[0]) # Get the index of the highest probability
-        confidence = float(np.max(predictions[0])) # Get the confidence score
+        predicted_class_idx = np.argmax(predictions[0])  # Get the index of the highest probability
+        confidence = float(np.max(predictions[0]))  # Get the confidence score
 
         # Map the predicted index to the actual disease name
         predicted_disease = class_names.get(str(predicted_class_idx), "Unknown Disease")
@@ -93,4 +91,5 @@ def predict():
         return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))  # ✅ Dynamic port for Render
+    app.run(debug=False, host='0.0.0.0', port=port)
