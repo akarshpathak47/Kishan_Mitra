@@ -1,47 +1,49 @@
 import os
+import json
+import numpy as np
+import tensorflow as tf
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import tensorflow as tf
 from tensorflow.keras.preprocessing import image
-import numpy as np
-import json
 from PIL import Image
 
-# Import recommendation logic from the same folder
+# Import recommendation logic
 from recommendations import get_recommendations
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+CORS(app)
 
-# Define paths to your ML model and class names JSON
+# --- CONFIGURATION ---
+# Adjust this path if your 'ml' folder is in a different spot
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'ml', 'crop_disease_model_best_weights.h5')
 CLASS_NAMES_PATH = os.path.join(os.path.dirname(__file__), 'class_names.json')
 
-# Load the trained model and class names
 model = None
 class_names = None
 
 def load_ml_resources():
-    """Loads the ML model and class names into memory."""
     global model, class_names
     try:
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        print(f"ML model loaded successfully from {MODEL_PATH}")
-    except Exception as e:
-        print(f"Error loading ML model from {MODEL_PATH}: {e}")
-        model = None
+        # 1. Load Model
+        if os.path.exists(MODEL_PATH):
+            model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+            print(f"✅ SUCCESS: Model loaded from {MODEL_PATH}")
+        else:
+            print(f"❌ ERROR: Model file not found at {MODEL_PATH}")
 
-    try:
-        with open(CLASS_NAMES_PATH, 'r') as f:
-            class_names = json.load(f)
-            print(f"Class names loaded successfully from {CLASS_NAMES_PATH}")
-    except Exception as e:
-        print(f"Error loading class names from {CLASS_NAMES_PATH}: {e}")
-        class_names = None
+        # 2. Load Class Names
+        if os.path.exists(CLASS_NAMES_PATH):
+            with open(CLASS_NAMES_PATH, 'r') as f:
+                class_names = json.load(f)
+            print(f"✅ SUCCESS: {len(class_names)} classes loaded.")
+        else:
+            print(f"❌ ERROR: class_names.json not found at {CLASS_NAMES_PATH}")
 
-# Load resources when the Flask app starts
-with app.app_context():
-    load_ml_resources()
+    except Exception as e:
+        print(f"🚨 CRITICAL ERROR during loading: {e}")
+
+# Load resources immediately
+load_ml_resources()
 
 @app.route('/')
 def home():
@@ -50,34 +52,46 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     if model is None or class_names is None:
-        return jsonify({"error": "ML model or class names could not be loaded."}), 500
+        return jsonify({"error": "Model or class names not loaded on server."}), 500
 
-    # Check if an image file is present in the request
     if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
+        return jsonify({"error": "No file uploaded"}), 400
+    
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
+    
     try:
-        # Read the image file directly from the stream
+        # --- IMAGE PREPROCESSING ---
         img = Image.open(file.stream).convert('RGB')
-        img = img.resize((224, 224))  # Resize to model's expected input shape
-
-        # Convert image to a numpy array and normalize
+        img = img.resize((224, 224)) 
+        
         img_array = image.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension (1, 224, 224, 3)
-        img_array /= 255.0  # Normalize pixel values to [0, 1]
+        img_array = np.expand_dims(img_array, axis=0) 
+        
+        # FIX: Ensure normalization matches your training (usually 1/255)
+        img_array = img_array / 255.0 
 
-        # Make prediction
+        # --- PREDICTION ---
         predictions = model.predict(img_array)
-        predicted_class_idx = np.argmax(predictions[0])  # Get the index of the highest probability
-        confidence = float(np.max(predictions[0]))  # Get the confidence score
+        predicted_class_idx = int(np.argmax(predictions[0]))
+        confidence = float(np.max(predictions[0]))
 
-        # Map the predicted index to the actual disease name
-        predicted_disease = class_names.get(str(predicted_class_idx), "Unknown Disease")
+        # --- DEBUGGING LOGS (Check your VS Code Terminal!) ---
+        print("-" * 30)
+        print(f"DEBUG: Predicted Index -> {predicted_class_idx}")
+        print(f"DEBUG: Confidence -> {confidence:.2%}")
+        
+        # --- MAPPING INDEX TO NAME ---
+        # Handles if class_names.json is a LIST or a DICT
+        if isinstance(class_names, list):
+            predicted_disease = class_names[predicted_class_idx]
+        else:
+            # If it's a dict like {"0": "Healthy"}, use .get()
+            predicted_disease = class_names.get(str(predicted_class_idx), "Unknown Disease")
 
-        # Get recommendations based on the predicted disease
+        print(f"DEBUG: Final Disease Name -> {predicted_disease}")
+        print("-" * 30)
+
+        # --- GET RECOMMENDATIONS ---
         recommendations = get_recommendations(predicted_disease)
 
         return jsonify({
@@ -87,9 +101,9 @@ def predict():
         })
 
     except Exception as e:
-        app.logger.error(f"Prediction error: {e}", exc_info=True)
-        return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
+        print(f"🚨 PREDICTION ERROR: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # ✅ Dynamic port for Render
-    app.run(debug=False, host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
