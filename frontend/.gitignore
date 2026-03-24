@@ -1,4 +1,6 @@
+# ----------------------
 # Logs
+# ----------------------
 logs
 *.log
 npm-debug.log*
@@ -7,18 +9,100 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# ----------------------
+# Node / Frontend
+# ----------------------
+node_modules/
+dist/
+dist-ssr/
+build/
 *.local
 
-# Editor directories and files
+# ----------------------
+# Python
+# ----------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ----------------------
+# Virtual Environment
+# ----------------------
+venv/
+backend/venv/
+env/
+ENV/
+
+# ----------------------
+# Environment variables
+# ----------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ----------------------
+# Python Distribution
+# ----------------------
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+*.egg
+
+# ----------------------
+# ML / AI Models
+# ----------------------
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.pb
+
+# ----------------------
+# Jupyter Notebook
+# ----------------------
+.ipynb_checkpoints
+
+# ----------------------
+# OS Files
+# ----------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------
+# Editor / IDE
+# ----------------------
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ----------------------
+# Coverage / Testing
+# ----------------------
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# ----------------------
+# Temporary Files
+# ----------------------
+tmp/
+temp/
+*.tmp
