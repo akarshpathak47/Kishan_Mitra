@@ -28,7 +28,7 @@ function App() {
 
     try {
       // Connect to your Flask backend
-      const response = await fetch("https://kishan-mitra-1.onrender.com/predict", {
+      const response = await fetch("https://kishan-mitra-drh5.onrender.com//predict", {
         method: "POST",
         body: formData,
       });
